@@ -1,41 +1,49 @@
 import streamlit as st
+from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import speech_recognition as sr
-import tempfile
-import os
+import queue
+import av
 
 # Title and Description
-st.title("🎤 Speech to Text Recognition App")
-st.write("Upload an audio file, and the app will transcribe it into text.")
+st.title("🎤 Live Speech-to-Text Recognition")
+st.write("Speak into your microphone, and the app will transcribe your speech in real time.")
 
-# Speech Recognition Object
-recognizer = sr.Recognizer()
+# Create an audio queue
+audio_queue = queue.Queue()
 
-# File Uploader
-audio_file = st.file_uploader("Upload an audio file (WAV, MP3, OGG)", type=["wav", "mp3", "ogg"])
+# Speech recognition callback function
+def callback(indata, frame_count, time_info, status):
+    audio_queue.put(bytes(indata))
 
-if audio_file is not None:
-    st.audio(audio_file, format="audio/wav")
+# WebRTC Audio Stream
+class AudioProcessor:
+    def __init__(self):
+        self.recognizer = sr.Recognizer()
+        self.source = sr.Microphone()
     
-    # Save uploaded file to a temporary location
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as temp_audio:
-        temp_audio.write(audio_file.read())
-        temp_audio_path = temp_audio.name
+    def recv(self, frame: av.AudioFrame) -> av.AudioFrame:
+        audio = frame.to_ndarray()
+        audio_data = sr.AudioData(audio.tobytes(), 16000, 2)
+        
+        try:
+            text = self.recognizer.recognize_google(audio_data)
+            st.text_area("Live Transcription:", value=text, height=150)
+        except sr.UnknownValueError:
+            st.warning("Speech not recognized, please try again.")
+        except sr.RequestError:
+            st.error("Could not request results, check your internet connection.")
+        
+        return frame
 
-    # Process the audio file
-    with sr.AudioFile(temp_audio_path) as source:
-        st.write("🔄 Processing audio...")
-        audio_data = recognizer.record(source)
+# Start WebRTC
+webrtc_streamer(
+    key="speech-to-text",
+    mode=WebRtcMode.SENDONLY,
+    audio_receiver_size=1024,
+    media_stream_constraints={"video": False, "audio": True},
+    async_processing=True,
+    rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+    video_processor_factory=AudioProcessor,
+)
 
-    # Perform Speech Recognition
-    try:
-        text = recognizer.recognize_google(audio_data)
-        st.subheader("📝 Transcribed Text:")
-        st.write(text)
-    except sr.UnknownValueError:
-        st.error("⚠️ Sorry, could not understand the audio.")
-    except sr.RequestError:
-        st.error("🚫 Could not request results, check your internet connection.")
-
-    # Clean up temporary file
-    os.remove(temp_audio_path)
 
