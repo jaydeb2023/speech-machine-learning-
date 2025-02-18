@@ -1,10 +1,11 @@
 streamlit
-streamlit-webrtc
-speechrecognition
+websockets
+asyncio
+base64
+json
 pyaudio
-numpy
-av
-
+os
+pathlib
 
 
 
