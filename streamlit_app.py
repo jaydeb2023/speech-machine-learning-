@@ -1,3 +1,5 @@
+pip install streamlit-webrtc
+
 import streamlit as st
 from streamlit_webrtc import webrtc_streamer, WebRtcMode
 import speech_recognition as sr
