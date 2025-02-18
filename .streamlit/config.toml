@@ -1,4 +1,4 @@
-pip install streamlit-webrtc speechrecognition numpy av
+
 
 [theme]
 primaryColor="#F63366"
