@@ -1,10 +1,10 @@
 streamlit
 streamlit-webrtc
 speechrecognition
+pyaudio
 numpy
 av
-pyaudio
-portaudio
+
 
 
 
